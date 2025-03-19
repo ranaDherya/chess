@@ -9,6 +9,6 @@ const router = Router();
 
 router.get("/creategame", createGameWithRandom);
 router.get("/creategamelink", createGameShareableLink);
-router.get("/:id", joinGame);
+router.get("/:gameId", joinGame);
 
 export default router;

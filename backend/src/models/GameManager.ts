@@ -15,9 +15,11 @@ export class GameManager {
   }
 
   addUser(userId: string, socket: WebSocket) {
+    console.log(userId);
     const player = players.get(userId);
     if (!player) return;
     player.socket = socket;
+    console.log("player2 is added to users");
     this.addHandler(player);
   }
 
@@ -41,10 +43,11 @@ export class GameManager {
   }
 
   private addHandler(player: Player) {
+    console.log("We in player 2 handler");
     if (!player.socket) return null;
     player.socket.on("message", (data) => {
       const message = JSON.parse(data.toString());
-
+      console.log("player 2 message: ", message);
       // starts game with randoms
       if (message.type === INIT_GAME) {
         if (this.pendingUser) {
@@ -65,9 +68,13 @@ export class GameManager {
 
       if (message.type === JOIN_GAME) {
         const game = games.get(message.payload.gameID);
+        console.log("place 1");
         if (!game) return null;
-        game.startGame();
-        console.log("Game joined" + game.id);
+        if (player.getUserId() !== game.player1.id) {
+          console.log("place 2");
+          game.startGame();
+          console.log("Game joined" + game.id);
+        }
       }
 
       if (message.type)

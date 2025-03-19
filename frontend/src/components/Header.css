@@ -1,0 +1,81 @@
+.nav-bar {
+  display: sticky;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 10vh;
+  padding-left: 15px;
+  padding-top: 10px;
+  padding-right: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #000;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.nav-bar a {
+  text-decoration: none;
+  color: white;
+  margin: 0 15px;
+  font-size: 18px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.nav-bar a:hover {
+  color: #ffcc00;
+}
+
+.nav-bar .menu {
+  display: flex;
+  align-items: center;
+}
+
+.nav-bar .menu-item {
+  margin: 0 10px;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 5vw;
+  padding: 5px;
+}
+
+.logo-container:hover {
+  cursor: pointer;
+  scale: 1.02;
+  transition: 1s;
+}
+
+.logo {
+  left: 0px;
+  top: 0px;
+  width: 4vw;
+  height: 7vh;
+  transform: scaleX(-1);
+}
+
+.logo-container > span {
+  font-size: 24px;
+  font-weight: 700;
+  padding-bottom: 10px !important;
+}
+
+.account-section {
+  width: 5vw;
+}
+
+.account-section > span {
+  font-weight: 500;
+}
+
+.account-section > span:hover {
+  scale: 1.05;
+  cursor: pointer;
+  color: #ffcc00;
+}
