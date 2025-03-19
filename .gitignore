@@ -1,0 +1,6 @@
+node_modules
+
+/backend/dist
+/backend/tsconfig.tsbuildinfo
+
+package-lock.json
