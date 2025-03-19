@@ -10,8 +10,8 @@ export const createGameWithRandom = async (req: Request, res: Response) => {
 
   res.json({
     message: "User is created.",
-    userId: player.id,
-    ws: "ws://localhost:8080",
+    userID: player.id,
+    ws: `ws://localhost:8080?userId=${player.id}`,
   });
 };
 
@@ -22,14 +22,13 @@ export const createGameShareableLink = async (req: Request, res: Response) => {
   players.set(player1.id, player1);
   const game = new Game({ player1, player2 });
   games.set(game.id, game);
-  const gameUrl = `localhost:3000/api/game/${game.id}`;
   player1.currentGame = game.id;
 
   res.json({
-    gameURL: gameUrl,
+    gameID: game.id,
     message: "User is created.",
-    userId: player1.id,
-    ws: "ws://localhost:8080",
+    userID: player1.id,
+    ws: `ws://localhost:8080?userID=${player1.id}`,
   });
 };
 
@@ -37,9 +36,9 @@ export const createGameShareableLink = async (req: Request, res: Response) => {
 export const joinGame = async (req: Request, res: Response) => {
   const player = new Player();
   players.set(player.id, player);
-  const { id } = req.params;
+  const { gameId } = req.params;
 
-  const game = games.get(id);
+  const game = games.get(gameId);
 
   if (!game) {
     res.status(404).json({ message: "Game not found." });
@@ -47,12 +46,15 @@ export const joinGame = async (req: Request, res: Response) => {
   }
 
   game.player2 = player;
-  player.currentGame = id;
+  player.currentGame = gameId;
+  console.log("Game: ", game);
+
+  console.log("player 2 created: ", player.id);
 
   res.json({
-    userId: player.id,
-    gameId: id,
-    ws: `ws://localhost:8080/`,
+    userID: player.id,
+    gameID: gameId,
+    ws: `ws://localhost:8080?userID=${player.id}`,
     message: "Game Exists!!",
   });
 };

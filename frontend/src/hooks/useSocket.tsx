@@ -1,29 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-const WS_URL = "ws://localhost:8080";
+type props = {
+  wsURL: string | null;
+  setSocket: (socket: WebSocket | null) => void;
+};
 
-export const useSocket = () => {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-
+export const useSocket = (props: props) => {
   useEffect(() => {
     let ws: WebSocket;
 
     const connectWebSocket = () => {
-      ws = new WebSocket(WS_URL);
+      console.log("WS URL: ", props.wsURL);
+      ws = new WebSocket(props.wsURL || "");
 
       ws.onopen = () => {
         console.log("✅ WebSocket Connected");
-        setSocket(ws);
+        props.setSocket(ws);
       };
 
       ws.onclose = () => {
         console.log("❌ WebSocket Disconnected. Reconnecting...");
-        setSocket(null);
+        props.setSocket(null);
         setTimeout(connectWebSocket, 3000);
       };
 
       ws.onerror = (error) => {
         console.error("❌ WebSocket Error", error);
+        props.setSocket(null);
         ws.close();
       };
     };
@@ -31,9 +34,8 @@ export const useSocket = () => {
     connectWebSocket();
 
     return () => {
+      props.setSocket(null);
       ws.close();
     };
   }, []);
-
-  return socket;
 };

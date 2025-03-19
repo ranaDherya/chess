@@ -9,11 +9,13 @@ const server = http.createServer(app);
 // Register WebSocket routes
 wss.on("connection", function connection(ws, req) {
   const { query } = parse(req.url!, true);
-  const userId = query.userId as string;
+  const userID = query.userID as string;
+  console.log("Query: ", query);
+  console.log(userID);
 
-  gameManager.addUser(userId, ws);
+  gameManager.addUser(userID, ws);
 
-  ws.on("disconnect", () => gameManager.removeUser(userId));
+  ws.on("disconnect", () => gameManager.removeUser(userID));
 });
 
 const PORT = process.env.PORT || 3000;
