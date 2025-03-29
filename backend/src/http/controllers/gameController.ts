@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { Player } from "../models/Player";
-import { games, players } from "../services/gameService";
-import { Game } from "../models/Game";
+import { Player } from "../../models/Player";
+import { games, players } from "../../services/gameService";
+import { Game } from "../../models/Game";
 
 // Want to play with random players
 export const createGameWithRandom = async (req: Request, res: Response) => {

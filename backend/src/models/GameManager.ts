@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { INIT_GAME, INIT_WITH_FRIEND, JOIN_GAME, MOVE } from "../messages";
+import { INIT_GAME, INIT_WITH_FRIEND, JOIN_GAME, MOVE } from "../constants";
 import { Game } from "../models/Game";
 import { Player } from "./Player";
 import { players } from "../services/gameService";
