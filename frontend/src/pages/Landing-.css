@@ -1,0 +1,67 @@
+.landing-container {
+  background-color: rgba(0, 0, 0, 0.75);
+  width: 100vw;
+  height: 90vh;
+  display: flex;
+  padding-top: 5vh;
+}
+
+.landing-image {
+  width: 50vw;
+  padding-left: 5vw;
+  justify-content: flex-end;
+  align-items: end;
+}
+
+.landing-image > img {
+  width: 35vw;
+  height: 60vh;
+}
+
+.landing-play-div {
+  width: 60vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 60vh;
+  align-items: center;
+}
+
+.play-btn {
+  width: 13vw;
+  height: 7vh;
+  margin: 20px;
+  color: white;
+  border: 1px white solid;
+  border-radius: 10px;
+  background-color: green;
+  font-size: 24px;
+}
+
+.play-btn:hover {
+  scale: 1.05;
+  transition: 0.5s;
+}
+
+.link-input-box {
+  width: 13vw;
+  height: 7vh;
+  margin-bottom: 0;
+  border-radius: 10px;
+  border: none;
+}
+
+.link-input-box:focus {
+  border: none;
+}
+
+.join-game-sec {
+  display: flex;
+  justify-content: space-around;
+  flex-direction: column;
+  align-items: center;
+}
+
+.join-game-sec > button {
+  margin-top: 2px;
+}

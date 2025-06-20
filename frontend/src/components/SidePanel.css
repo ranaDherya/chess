@@ -1,0 +1,77 @@
+.sidepanel {
+  width: 7vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  margin-left: 0px;
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+}
+
+.sidepanel-logo {
+  font-size: 35px;
+  font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 8%;
+}
+
+.sidepanel-contents {
+  width: 100%;
+  /* margin-top: 5px; */
+  flex-direction: column;
+  display: flex;
+  /* height: 25%; */
+  justify-content: flex-start;
+}
+
+.sidepanel-contents span {
+  width: 100%;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 20px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.sidepanel-logo:hover,
+.sidepanel-contents span:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: 0.75s;
+}
+
+.sidepanel-login {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 10px;
+  height: 120px;
+}
+
+.sidepanel-search {
+  margin-top: 10px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidepanel-search input {
+  all: unset;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  width: 80%;
+  padding-left: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 15px;
+}

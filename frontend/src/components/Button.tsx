@@ -1,3 +1,5 @@
+import "./Button.css";
+
 export const Button = ({
   onClick,
   children,
@@ -6,11 +8,8 @@ export const Button = ({
   children: React.ReactNode;
 }) => {
   return (
-    <button
-      onClick={onClick}
-      className="px-8 py-4 text-2xl bg-green-500 hover:bg-green-700 text-white font-bold rounded"
-    >
+    <div onClick={onClick} className="button">
       {children}
-    </button>
+    </div>
   );
 };
