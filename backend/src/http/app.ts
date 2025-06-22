@@ -1,5 +1,5 @@
 import express from "express";
-import gameRoutes from "./routes/gameRoutes";
+// import gameRoutes from "./routes/gameRoutes";
 import cors from "cors";
 // import v1Router from './router/v1';
 import { initPassport } from "./utils/passportConfig";
@@ -27,10 +27,23 @@ app.use(
 initPassport();
 app.use(passport.initialize());
 app.use(passport.authenticate("session"));
+
+const allowedHosts = process.env.ALLOWED_HOSTS
+  ? process.env.ALLOWED_HOSTS.split(",")
+  : ["*"];
+
+// app.use(
+//   cors({
+//     origin: allowedHosts,
+//     methods: "GET,POST,PUT,DELETE",
+//     credentials: true,
+//   })
+// );
+
 app.use(cors());
 
 // Register HTTP routes
 app.use("/api/auth", authRoute);
-app.use("/api/game", gameRoutes);
+// app.use("/api/game", gameRoutes);
 
 export default app;

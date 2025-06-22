@@ -13,12 +13,13 @@
 }
 
 .landing-poster img {
-  height: 70vh;
-
+  height: 60vh;
+  object-fit: contain;
   border-radius: 6px;
 }
 
 .landing-content {
+  margin-left: 50px;
   color: white;
   display: flex;
   flex-direction: column;

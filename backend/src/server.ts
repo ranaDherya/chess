@@ -1,18 +1,24 @@
 import app from "./http/app";
 import { wss } from "./ws/socket";
-import { gameManager } from "./services/gameService";
+import { gameManager } from "./core/GameManager";
 import { parse } from "url";
+import { extractAuthUser } from "./ws/auth";
 
 // Run the WebSocket server
 wss.on("connection", function connection(ws, req) {
-  const { query } = parse(req.url!, true);
-  const userID = query.userID as string;
-  console.log("Query: ", query);
-  console.log(userID);
+  //@ts-ignore
+  const token: string = parse(req.url, true).query.token;
+  const user = extractAuthUser(token, ws);
+  gameManager.addUser(user);
 
-  gameManager.addUser(userID, ws);
+  ws.on("close", () => {
+    gameManager.removeUser(ws);
+  });
+});
 
-  ws.on("disconnect", () => gameManager.removeUser(userID));
+app.get("/", (req, res) => {
+  console.log("Hello");
+  res.json({ msg: "Supp!!!" });
 });
 
 // Runs the http server

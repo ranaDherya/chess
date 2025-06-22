@@ -1,14 +1,19 @@
+import React from "react";
 import { Chess, Color, PieceSymbol, Square } from "chess.js";
 import { useState } from "react";
 import { MOVE } from "../pages/Game";
 
-export const ChessBoard = ({
+import "./ChessBoard.css";
+
+function ChessBoard({
   chess,
+  isPaused,
   board,
   socket,
   setBoard,
 }: {
   chess: Chess;
+  isPaused: boolean;
   setBoard: React.Dispatch<
     React.SetStateAction<
       ({
@@ -24,37 +29,98 @@ export const ChessBoard = ({
     color: Color;
   } | null)[][];
   socket: WebSocket;
-}) => {
+}) {
   const [from, setFrom] = useState<null | Square>(null);
 
+  // Drag and Drop Handdling
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Needed to allow drop
+  };
+  const handleDragStart = (e: React.DragEvent, square: Square) => {
+    !isPaused && setFrom(square);
+  };
+  const handleDrop = (e: React.DragEvent, targetSquare: Square) => {
+    e.preventDefault();
+    if (!isPaused) {
+      if (from) {
+        socket.send(
+          JSON.stringify({
+            type: MOVE,
+            payload: {
+              move: {
+                from,
+                to: targetSquare,
+              },
+            },
+          })
+        );
+        console.log(
+          "socket sent with message:" +
+            JSON.stringify({
+              type: MOVE,
+              payload: {
+                move: {
+                  from,
+                  to: targetSquare,
+                },
+              },
+            })
+        );
+        setFrom(null);
+        chess.move({
+          from,
+          to: targetSquare,
+        });
+        setBoard(chess.board());
+        console.log({
+          from,
+          to: targetSquare,
+        });
+      }
+    }
+  };
+
   return (
-    <div className="text-white-200">
+    <div>
       {board.map((row, i) => {
         return (
-          <div key={i} className="flex">
+          <div key={i} className="chessboard-container">
             {row.map((square, j) => {
-              const squareRepresentation = (String.fromCharCode(97 + (j % 8)) +
+              const squareIndex = (String.fromCharCode(97 + (j % 8)) +
                 "" +
-                (8 - i)) as Square;
-
+                (8 - i)) as Square; // sq representation as a8, b6, e3, etc
               return (
                 <div
+                  className={`chessboard-squares ${
+                    (i + j) % 2 === 0 ? "square-green" : "square-white"
+                  }`}
+                  style={{
+                    borderTopRightRadius:
+                      i === 0 && j === 7 ? "6px" : undefined,
+                    borderTopLeftRadius: i === 0 && j === 0 ? "6px" : undefined,
+                    borderBottomLeftRadius:
+                      i === 7 && j === 0 ? "6px" : undefined,
+                    borderBottomRightRadius:
+                      i === 7 && j === 7 ? "6px" : undefined,
+                  }}
                   onClick={() => {
-                    if (!from) {
-                      setFrom(squareRepresentation);
-                    } else {
-                      socket.send(
-                        JSON.stringify({
-                          type: MOVE,
-                          payload: {
-                            move: {
-                              from,
-                              to: squareRepresentation,
+                    if (!isPaused) {
+                      if (!from) {
+                        if (square) {
+                          setFrom(squareIndex);
+                        }
+                      } else {
+                        socket.send(
+                          JSON.stringify({
+                            type: MOVE,
+                            payload: {
+                              move: {
+                                from,
+                                to: squareIndex,
+                              },
                             },
-                          },
-                        })
-                      );
-                      {
+                          })
+                        );
                         console.log(
                           "socket sent with message:" +
                             JSON.stringify({
@@ -62,43 +128,41 @@ export const ChessBoard = ({
                               payload: {
                                 move: {
                                   from,
-                                  to: squareRepresentation,
+                                  to: squareIndex,
                                 },
                               },
                             })
                         );
-                      }
 
-                      setFrom(null);
-                      chess.move({
-                        from,
-                        to: squareRepresentation,
-                      });
-                      setBoard(chess.board());
-                      console.log({
-                        from,
-                        to: squareRepresentation,
-                      });
+                        setFrom(null);
+                        chess.move({
+                          from,
+                          to: squareIndex,
+                        });
+                        setBoard(chess.board());
+                        console.log({
+                          from,
+                          to: squareIndex,
+                        });
+                      }
                     }
                   }}
-                  key={j}
-                  className={`w-16 h-16 ${
-                    (i + j) % 2 === 0 ? "bg-green-500" : "bg-slate-500"
-                  }`}
+                  key={squareIndex}
+                  onDrop={(e) => handleDrop(e, squareIndex)}
+                  onDragOver={handleDragOver}
                 >
-                  <div className="w-full justify-center flex h-full">
-                    <div className="h-full justify-center flex flex-col">
-                      {square ? (
-                        <img
-                          className="w-4"
-                          src={`/${
-                            square?.color === "b"
-                              ? square?.type
-                              : `${square?.type?.toUpperCase()} copy`
-                          }.png`}
-                        />
-                      ) : null}
-                    </div>
+                  <div className="chessboard-peices">
+                    {square ? (
+                      <img
+                        src={`/${
+                          square?.color === "b"
+                            ? square?.type
+                            : `${square?.type}-w`
+                        }.svg`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, squareIndex)}
+                      />
+                    ) : null}
                   </div>
                 </div>
               );
@@ -108,4 +172,6 @@ export const ChessBoard = ({
       })}
     </div>
   );
-};
+}
+
+export default ChessBoard;

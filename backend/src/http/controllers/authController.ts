@@ -3,22 +3,10 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { COOKIE_MAX_AGE } from "../../constants";
 import { db } from "../../db/db";
+import { UserDetails, UserJwtClaims } from "../../types/types";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
 const COOKIE_MAX_AGE_MILLISECONDS = COOKIE_MAX_AGE * 1000; // Convert seconds to milliseconds
-
-interface userJwtClaims {
-  userId: string;
-  name: string;
-  isGuest?: boolean;
-}
-
-interface UserDetails {
-  id: string;
-  token?: string;
-  name: string;
-  isGuest?: boolean;
-}
 
 // User Logins as Guest
 export const guestLogin = async (req: Request, res: Response) => {
@@ -79,7 +67,7 @@ export const pageRefreshes = async (req: Request, res: Response) => {
   } else if (req.cookies && req.cookies.guest) {
     // If user is not logged in but has a guest token in the cookie
     // Decode the token to get userId and name
-    const decoded = jwt.verify(req.cookies.guest, JWT_SECRET) as userJwtClaims;
+    const decoded = jwt.verify(req.cookies.guest, JWT_SECRET) as UserJwtClaims;
     const token = jwt.sign(
       { userId: decoded.userId, name: decoded.name, isGuest: true },
       JWT_SECRET,

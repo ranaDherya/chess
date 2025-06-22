@@ -2,8 +2,13 @@ import React from "react";
 import { Button } from "../components/Button";
 import "./Landing.css";
 import chessBoardPNG from "/landing-chess-board.png";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useUser } from "../context/UserContext";
 
 function Landing() {
+  const navigate = useNavigate();
+  const { setUser, setToken } = useUser();
   return (
     <div className="landing-container">
       <div className="landing-poster">
@@ -22,7 +27,21 @@ function Landing() {
           </span>
         </div>
         <div className="landing-content-play-btn">
-          <Button onClick={() => {}}>Play Online</Button>
+          <Button
+            onClick={async () => {
+              const data = await axios.post(
+                "http://localhost:3000/api/auth/guest",
+                { name: "Dherya" }
+              );
+              console.log("Data:::", data);
+              setUser(data.data.id);
+              setToken(data.data.token);
+
+              navigate("/game/");
+            }}
+          >
+            Play Online
+          </Button>
         </div>
       </div>
     </div>

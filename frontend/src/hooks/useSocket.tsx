@@ -1,17 +1,21 @@
 import { useEffect } from "react";
+import { useUser } from "../context/UserContext";
+
+const WS_URL = "ws://localhost:8080";
 
 type props = {
-  wsURL: string | null;
   setSocket: (socket: WebSocket | null) => void;
 };
 
 export const useSocket = (props: props) => {
+  const user = useUser();
+  console.log("inside usesockets");
   useEffect(() => {
     let ws: WebSocket;
 
     const connectWebSocket = () => {
-      console.log("WS URL: ", props.wsURL);
-      ws = new WebSocket(props.wsURL || "");
+      console.log("WS URL: ", WS_URL);
+      ws = new WebSocket(`${WS_URL}?token=${user.token}`);
 
       ws.onopen = () => {
         console.log("✅ WebSocket Connected");
