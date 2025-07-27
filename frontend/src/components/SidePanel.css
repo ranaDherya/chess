@@ -75,3 +75,7 @@
   padding-bottom: 4px;
   font-size: 15px;
 }
+
+.logout-btn {
+  width: 100%;
+}

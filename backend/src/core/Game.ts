@@ -5,6 +5,8 @@ import { socketManager } from "../ws/SocketManager";
 import { User } from "../ws/User";
 import { AuthProvider } from "@prisma/client";
 import { ObjectId } from "mongodb";
+import { DbMove } from "../types/types";
+import { redis } from "../redis/redis";
 
 type GAME_STATUS =
   | "IN_PROGRESS"
@@ -54,6 +56,7 @@ export class Game {
   private player2TimeConsumed = 0;
   private startTime = new Date(Date.now());
   private lastMoveTime = new Date(Date.now());
+  private moveList: string[];
 
   constructor(
     whitePlayerId: string,
@@ -69,6 +72,7 @@ export class Game {
       this.startTime = startTime;
       this.lastMoveTime = startTime;
     }
+    this.moveList = [];
   }
 
   // Re-Sync Game
@@ -158,12 +162,17 @@ export class Game {
             name: WhitePlayer?.name,
             id: this.whitePlayerId,
             isGuest: WhitePlayer?.provider === AuthProvider.GUEST,
+            timeConsumed: 0,
           },
           blackPlayer: {
             name: BlackPlayer?.name,
             id: this.blackPlayerId,
             isGuest: BlackPlayer?.provider === AuthProvider.GUEST,
+            timeConsumed: 0,
           },
+          startTime: this.startTime,
+          moveList: [],
+          timePerPlayer: 600000,
           fen: this.board.fen(),
           moves: [],
         },
@@ -204,7 +213,7 @@ export class Game {
   }
 
   // Add Moves to DB
-  async addMovesToDb(move: Move, moveTimestamp: Date) {
+  async addMovesToDb(move: DbMove, moveTimestamp: Date) {
     await db.$transaction([
       db.move.create({
         data: {
@@ -212,8 +221,8 @@ export class Game {
           moveNumber: this.moveCount + 1,
           from: move.from,
           to: move.to,
-          before: move.before,
           after: move.after,
+          before: move.before,
           createdAt: moveTimestamp,
           timeTaken: moveTimestamp.getTime() - this.lastMoveTime.getTime(),
           san: move.san,
@@ -247,26 +256,52 @@ export class Game {
       );
       return;
     }
-
     const moveTimestamp = new Date(Date.now());
 
+    // Get FEN before move
+    const beforeFen = this.board.fen();
+    let moveResult;
     try {
       if (isPromoting(this.board, move.from, move.to)) {
-        this.board.move({
+        moveResult = this.board.move({
           from: move.from,
           to: move.to,
           promotion: "q",
         });
       } else {
-        this.board.move({
+        moveResult = this.board.move({
           from: move.from,
           to: move.to,
         });
       }
+      this.moveList.push(moveResult.san);
     } catch (error) {
       console.error("Error while making move", error);
       return;
     }
+
+    // Get FEN after move
+    const afterFen = this.board.fen();
+
+    // Build the move object for DB
+    const dbMove: DbMove = {
+      from: move.from,
+      to: move.to,
+      before: beforeFen,
+      after: afterFen,
+      san: moveResult?.san || "",
+    };
+
+    const redisPayload = {
+      type: "MOVE_EVENT",
+      gameId: this.gameId,
+      moveNumber: this.moveCount + 1,
+      move: dbMove,
+      createdAt: moveTimestamp.toISOString(),
+      timeTaken: moveTimestamp.getTime() - this.lastMoveTime.getTime(),
+    };
+    // Push to Redis queue
+    await redis.rPush("move_queue", JSON.stringify(redisPayload));
 
     // Flipped player turn because move already happened
     if (this.board.turn() === "b") {
@@ -278,7 +313,7 @@ export class Game {
         moveTimestamp.getTime() - this.lastMoveTime.getTime();
     }
 
-    await this.addMovesToDb(move, moveTimestamp);
+    // await this.addMovesToDb(dbMove, moveTimestamp);
     this.resetAbandonTimer();
     this.resetMoveTimer();
 
@@ -289,9 +324,16 @@ export class Game {
       JSON.stringify({
         type: MOVE,
         payload: {
-          move,
+          move: {
+            from: move.from,
+            to: move.to,
+            promotion: move.promotion,
+          },
+          fen: afterFen,
+          playerTurn: this.board.turn(),
           player1TimeConsumed: this.player1TimeConsumed,
           player2TimeConsumed: this.player2TimeConsumed,
+          moveList: this.moveList,
         },
       })
     );

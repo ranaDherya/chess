@@ -6,6 +6,8 @@ import {
   logoutUser,
   loginFailed,
 } from "../controllers/authController";
+import { COOKIE_MAX_AGE } from "../../constants";
+import { getEnv } from "../utils/getEnv";
 
 const router = Router();
 
@@ -16,8 +18,7 @@ router.get("/logout", logoutUser);
 router.get("/login/failed", loginFailed);
 
 // Login With Google and Github using Passport.js
-const CLIENT_URL =
-  process.env.AUTH_REDIRECT_URL ?? "http://localhost:5173/game/random";
+const CLIENT_URL = getEnv("AUTH_REDIRECT_URL", "http://localhost:5173");
 
 router.get(
   "/google",
@@ -39,10 +40,28 @@ router.get(
 
 router.get(
   "/github/callback",
-  passport.authenticate("github", {
-    successRedirect: CLIENT_URL,
-    failureRedirect: "/login/failed",
-  })
+  passport.authenticate("github", { failureRedirect: "/login/failed" }),
+  async (req, res) => {
+    // `req.user` is available now
+    const user = req.user as any;
+    const token = user.jwtToken;
+
+    // send the cookie again
+    res.cookie(`user`, token, { maxAge: COOKIE_MAX_AGE * 1000 });
+    // send userDetails object to connect to the socket server
+    const UserDetails = {
+      id: user.id,
+      name: user.name!,
+      token: token,
+      isGuest: false,
+    };
+    // res.json(UserDetails);
+    res.redirect(
+      `${CLIENT_URL}/github/callback?token=${token}&name=${encodeURIComponent(
+        user.name
+      )}&id=${user.id}`
+    );
+  }
 );
 
 export default router;

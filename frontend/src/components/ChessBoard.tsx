@@ -4,16 +4,31 @@ import { useState } from "react";
 import { MOVE } from "../pages/Game";
 
 import "./ChessBoard.css";
+import { useUser } from "../context/UserContext";
+
+function isPromotionMove(chess: Chess, from: Square, to: Square): boolean {
+  const piece = chess.get(from);
+  if (!piece || piece.type !== "p") return false;
+
+  const targetRank = parseInt(to[1]);
+  const isWhite = piece.color === "w";
+
+  return (isWhite && targetRank === 8) || (!isWhite && targetRank === 1);
+}
 
 function ChessBoard({
   chess,
-  isPaused,
+  paused,
   board,
   socket,
   setBoard,
+  activePlayer,
 }: {
   chess: Chess;
-  isPaused: boolean;
+  paused: {
+    isPaused: boolean;
+    setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
+  };
   setBoard: React.Dispatch<
     React.SetStateAction<
       ({
@@ -28,29 +43,63 @@ function ChessBoard({
     type: PieceSymbol;
     color: Color;
   } | null)[][];
-  socket: WebSocket;
+  socket: WebSocket | null;
+  activePlayer: "w" | "b" | null;
 }) {
   const [from, setFrom] = useState<null | Square>(null);
+  const [invalidMoveSquare, setInvalidMoveSquare] = useState<Square | null>();
+  const { isPaused, setIsPaused } = paused;
+  const { playerColor, gameID, userID } = useUser();
+  const canMove = !isPaused && activePlayer === playerColor;
 
   // Drag and Drop Handdling
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault(); // Needed to allow drop
   };
   const handleDragStart = (e: React.DragEvent, square: Square) => {
-    !isPaused && setFrom(square);
+    if (isPaused) {
+      e.preventDefault();
+    }
+    if (!isPaused && canMove) {
+      setFrom(square);
+      // Hide the default drag ghost image
+      // const img = document.createElement("img");
+      // img.src =
+      //   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="; // 1x1 transparent gif
+      // e.dataTransfer.setDragImage(img, 0, 0);
+    }
   };
   const handleDrop = (e: React.DragEvent, targetSquare: Square) => {
     e.preventDefault();
-    if (!isPaused) {
-      if (from) {
-        socket.send(
+    if (!isPaused && canMove) {
+      if (from !== targetSquare) {
+        try {
+          const tempChess = new Chess(chess.fen());
+          const isPromotion = isPromotionMove(chess, from!, targetSquare);
+          tempChess.move({
+            from: from ?? "",
+            to: targetSquare,
+            promotion: isPromotion ? "q" : undefined,
+          });
+        } catch (e) {
+          setInvalidMoveSquare(from);
+          setTimeout(() => setInvalidMoveSquare(null), 1000);
+          return;
+        }
+        const isPromotion = isPromotionMove(chess, from!, targetSquare);
+        const move = {
+          from: from ?? "",
+          to: targetSquare,
+          promotion: isPromotion ? "q" : undefined, // default to queen
+        };
+
+        socket?.send(
           JSON.stringify({
             type: MOVE,
             payload: {
-              move: {
-                from,
-                to: targetSquare,
-              },
+              move: move,
+              userId: userID,
+              gameId: gameID,
             },
           })
         );
@@ -63,19 +112,22 @@ function ChessBoard({
                   from,
                   to: targetSquare,
                 },
+                userId: userID,
+                gameId: gameID,
               },
             })
         );
-        setFrom(null);
-        chess.move({
-          from,
-          to: targetSquare,
-        });
+
+        chess.move(move);
         setBoard(chess.board());
         console.log({
           from,
           to: targetSquare,
         });
+        setIsPaused(true);
+        setFrom(null);
+      } else if (from === targetSquare) {
+        setFrom(null);
       }
     }
   };
@@ -93,6 +145,8 @@ function ChessBoard({
                 <div
                   className={`chessboard-squares ${
                     (i + j) % 2 === 0 ? "square-green" : "square-white"
+                  } ${
+                    invalidMoveSquare === squareIndex ? "square-invalid" : ""
                   }`}
                   style={{
                     borderTopRightRadius:
@@ -104,20 +158,46 @@ function ChessBoard({
                       i === 7 && j === 7 ? "6px" : undefined,
                   }}
                   onClick={() => {
-                    if (!isPaused) {
+                    if (!isPaused && canMove) {
                       if (!from) {
                         if (square) {
                           setFrom(squareIndex);
                         }
-                      } else {
-                        socket.send(
+                      } else if (from !== squareIndex) {
+                        try {
+                          const tempChess = new Chess(chess.fen());
+                          const isPromotion = isPromotionMove(
+                            chess,
+                            from!,
+                            squareIndex
+                          );
+                          tempChess.move({
+                            from: from ?? "",
+                            to: squareIndex,
+                            promotion: isPromotion ? "q" : undefined,
+                          });
+                        } catch (e) {
+                          setInvalidMoveSquare(from);
+                          setTimeout(() => setInvalidMoveSquare(null), 1000);
+                          return;
+                        }
+                        const isPromotion = isPromotionMove(
+                          chess,
+                          from!,
+                          squareIndex
+                        );
+                        const move = {
+                          from,
+                          to: squareIndex,
+                          promotion: isPromotion ? "q" : undefined, // default to queen
+                        };
+                        socket?.send(
                           JSON.stringify({
                             type: MOVE,
                             payload: {
-                              move: {
-                                from,
-                                to: squareIndex,
-                              },
+                              move: move,
+                              gameId: gameID,
+                              userId: userID,
                             },
                           })
                         );
@@ -126,24 +206,22 @@ function ChessBoard({
                             JSON.stringify({
                               type: MOVE,
                               payload: {
-                                move: {
-                                  from,
-                                  to: squareIndex,
-                                },
+                                move: move,
+                                gameId: gameID,
+                                userId: userID,
                               },
                             })
                         );
-
-                        setFrom(null);
-                        chess.move({
-                          from,
-                          to: squareIndex,
-                        });
+                        setIsPaused(true);
+                        chess.move(move);
                         setBoard(chess.board());
                         console.log({
                           from,
                           to: squareIndex,
                         });
+                        setFrom(null);
+                      } else if (from === squareIndex) {
+                        setFrom(null);
                       }
                     }
                   }}

@@ -12,3 +12,13 @@ export interface UserDetails {
   name: string;
   isGuest?: boolean;
 }
+
+// Move table DB
+export type DbMove = {
+  from: string;
+  to: string;
+  before: string;
+  after: string;
+  san: string;
+  comments?: string | null;
+};

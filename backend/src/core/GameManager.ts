@@ -8,6 +8,7 @@ import { GameStatus } from "@prisma/client";
 import {
   GAME_OVER,
   INIT_GAME,
+  CREATE_GAME,
   JOIN_GAME,
   MOVE,
   OPPONENT_DISCONNECTED,
@@ -45,7 +46,11 @@ class GameManager {
   // adds user and a handler to the user
   addUser(user: User) {
     this.users.set(user.socket, user);
-    this.addHandler(user);
+    // Prevent duplicate handlers
+    if (!(user.socket as any)._handlerAdded) {
+      this.addHandler(user);
+      (user.socket as any)._handlerAdded = true;
+    }
   }
 
   // remove user
@@ -70,28 +75,28 @@ class GameManager {
       const message = JSON.parse(data.toString());
       // INIT_GAME
       if (message.type === INIT_GAME) {
-        // Pending game is available
         if (this.pendingGameId) {
           const game = this.games.get(this.pendingGameId);
           if (!game) {
-            console.error("Game not found!");
+            user.socket.send(
+              JSON.stringify({
+                type: GAME_ALERT,
+                payload: { message: "Game not found!" },
+              })
+            );
             return;
           }
           if (user.userId === game.whitePlayerId) {
-            socketManager.broadcast(
-              game.gameId,
+            user.socket.send(
               JSON.stringify({
                 type: GAME_ALERT,
-                payload: {
-                  message: "Trying to Connect with yourself?",
-                },
+                payload: { message: "Cannot join your own game!" },
               })
             );
-            console.log("message broadcasted");
             return;
           }
           socketManager.addUser(user, game.gameId);
-          await game?.updateSecondPlayer(user.userId);
+          await game.updateSecondPlayer(user.userId);
           this.pendingGameId = null;
         } else {
           const game = new Game(user.userId, null);
@@ -102,20 +107,45 @@ class GameManager {
             game.gameId,
             JSON.stringify({
               type: GAME_ADDED,
-              gameId: game.gameId,
+              payload: {
+                gameId: game.gameId,
+              },
             })
           );
         }
       }
 
+      if (message.type === CREATE_GAME) {
+        const game = new Game(user.userId, null);
+        this.games.set(game.gameId, game);
+        socketManager.addUser(user, game.gameId);
+        socketManager.broadcast(
+          game.gameId,
+          JSON.stringify({
+            type: GAME_ADDED,
+            payload: {
+              gameId: game.gameId,
+            },
+          })
+        );
+      }
+
       if (message.type === MOVE) {
         const gameId = message.payload.gameId;
         const game = this.games.get(gameId);
-        if (game) {
-          game.makeMove(user, message.payload.move);
-          if (game.result) {
-            this.removeGame(game.gameId);
-          }
+        if (!game) {
+          user.socket.send(
+            JSON.stringify({
+              type: GAME_ALERT,
+              payload: { message: "Game not found!" },
+            })
+          );
+          return;
+        }
+
+        game.makeMove(user, message.payload.move);
+        if (game.result) {
+          this.removeGame(game.gameId);
         }
       }
 

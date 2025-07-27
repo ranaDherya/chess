@@ -5,10 +5,14 @@ interface UserContextType {
   userSocket: WebSocket | null;
   gameID: string | null;
   token: string;
+  userName: string | null;
+  playerColor: string | null; // w-->white and b-->black
   setToken: (token: string) => void;
-  setUser: (userID: string) => void;
+  setUser: (userID: string, userName: string) => void;
   setSocket: (socket: WebSocket | null) => void;
   setGameID: (gameURL: string | null) => void;
+  setPlayerColor: (color: string) => void;
+  clearUser: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -18,9 +22,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [sockt, setSockt] = useState<WebSocket | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [tokn, setTokn] = useState<string>("");
+  const [color, setColor] = useState<string | null>(null);
+  const [name, setName] = useState<string | null>(null);
 
-  const setUser = (id: string) => {
+  const setUser = (id: string, name: string) => {
     setUserID(id);
+    setName(name);
   };
 
   const setSocket = (socket: WebSocket | null) => {
@@ -35,6 +42,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setTokn(token);
   };
 
+  const setPlayerColor = (color: string) => {
+    setColor(color);
+  };
+
+  const clearUser = () => {
+    sockt?.close();
+    setSockt(null);
+    setGameId(null);
+    setTokn("");
+    setColor(null);
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -42,10 +61,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         userSocket: sockt,
         gameID: gameId,
         token: tokn,
+        playerColor: color,
+        userName: name,
         setToken,
         setUser,
         setSocket,
         setGameID,
+        setPlayerColor,
+        clearUser,
       }}
     >
       {children}

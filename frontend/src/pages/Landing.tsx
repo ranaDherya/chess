@@ -1,14 +1,20 @@
 import React from "react";
 import { Button } from "../components/Button";
-import "./Landing.css";
 import chessBoardPNG from "/landing-chess-board.png";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { useUser } from "../context/UserContext";
 
-function Landing() {
+import "./Landing.css";
+
+type Props = {
+  showLoginModal: boolean;
+  setShowLoginModal: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+function Landing({ showLoginModal, setShowLoginModal }: Props) {
   const navigate = useNavigate();
-  const { setUser, setToken } = useUser();
+  const { token } = useUser();
+
   return (
     <div className="landing-container">
       <div className="landing-poster">
@@ -28,16 +34,12 @@ function Landing() {
         </div>
         <div className="landing-content-play-btn">
           <Button
-            onClick={async () => {
-              const data = await axios.post(
-                "http://localhost:3000/api/auth/guest",
-                { name: "Dherya" }
-              );
-              console.log("Data:::", data);
-              setUser(data.data.id);
-              setToken(data.data.token);
-
-              navigate("/game/");
+            onClick={() => {
+              if (!token) {
+                setShowLoginModal(!showLoginModal);
+              } else {
+                navigate("/game/");
+              }
             }}
           >
             Play Online

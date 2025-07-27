@@ -2,7 +2,24 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import { db } from "../../db/db";
-import dotenv from "dotenv";
+
+import jwt from "jsonwebtoken";
+import { getEnv } from "./getEnv";
+
+const JWT_SECRET = getEnv("JWT_SECRET", "your_secret_key");
+const COOKIE_MAX_AGE = "7d"; // or '1h', etc.
+
+function generateJWT(user: any, isGuest = false) {
+  return jwt.sign(
+    {
+      userId: user.id,
+      name: user.name,
+      isGuest: isGuest,
+    },
+    JWT_SECRET,
+    { expiresIn: COOKIE_MAX_AGE }
+  );
+}
 
 interface GithubEmailRes {
   email: string;
@@ -11,16 +28,16 @@ interface GithubEmailRes {
   visibility: "private" | "public";
 }
 
-dotenv.config();
-
-const GOOGLE_CLIENT_ID =
-  process.env.GOOGLE_CLIENT_ID || "your_google_client_id";
-const GOOGLE_CLIENT_SECRET =
-  process.env.GOOGLE_CLIENT_SECRET || "your_google_client_secret";
-const GITHUB_CLIENT_ID =
-  process.env.GITHUB_CLIENT_ID || "your_github_client_id";
-const GITHUB_CLIENT_SECRET =
-  process.env.GITHUB_CLIENT_SECRET || "your_github_client_secret";
+const GOOGLE_CLIENT_ID = getEnv("GOOGLE_CLIENT_ID", "your_google_client_id");
+const GOOGLE_CLIENT_SECRET = getEnv(
+  "GOOGLE_CLIENT_SECRET",
+  "your_google_client_secret"
+);
+const GITHUB_CLIENT_ID = getEnv("GITHUB_CLIENT_ID", "your_github_client_id");
+const GITHUB_CLIENT_SECRET = getEnv(
+  "GITHUB_CLIENT_SECRET",
+  "your_github_client_secret"
+);
 
 export function initPassport() {
   if (
@@ -39,7 +56,7 @@ export function initPassport() {
       {
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: "/auth/google/callback",
+        callbackURL: "/api/auth/google/callback",
       },
       async function (
         accessToken: string,
@@ -71,7 +88,7 @@ export function initPassport() {
       {
         clientID: GITHUB_CLIENT_ID,
         clientSecret: GITHUB_CLIENT_SECRET,
-        callbackURL: "/auth/github/callback",
+        callbackURL: "/api/auth/github/callback",
       },
       async function (
         accessToken: string,
@@ -101,6 +118,9 @@ export function initPassport() {
           },
         });
 
+        const token = generateJWT(user, false);
+        // profile.jwtToken = token;
+        user.jwtToken = token;
         done(null, user);
       }
     )

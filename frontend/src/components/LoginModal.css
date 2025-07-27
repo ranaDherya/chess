@@ -1,0 +1,86 @@
+.modal-overlay {
+  position: fixed;
+  background: rgba(0, 0, 0, 0);
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 35vh;
+  min-height: 300px;
+  max-height: 90vh;
+  width: 30vw;
+  min-width: 320px;
+  max-width: 90vw;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  text-align: center;
+  color: white;
+  background: #222;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content span {
+  margin: 0;
+}
+
+.guest-login {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 50%;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.5);
+}
+
+.guest-name-input {
+  all: unset;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  width: 60%;
+  height: 25%;
+  padding-left: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 15px;
+}
+
+.guest-login div {
+  height: calc(25% + 8px);
+  width: calc(60% + 8px);
+  margin-top: 4px;
+  padding-left: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  /* margin-bottom: 2px; */
+}
+
+.google-login,
+.github-login {
+  width: 100%;
+  height: 25%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.google-login div,
+.github-login div {
+  height: calc(50% + 8px);
+  width: calc(60% + 8px);
+  margin-top: 2px;
+  padding-left: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
