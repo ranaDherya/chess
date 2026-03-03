@@ -1,16 +1,13 @@
 import React from "react";
 import { Button } from "./Button";
 import { useUser } from "../context/UserContext";
+import { useAuthModal } from "../context/AuthModalContext";
 
 import "./SidePanel.css";
 
-type Props = {
-  showLoginModal: boolean;
-  setShowLoginModal: React.Dispatch<React.SetStateAction<boolean>>;
-};
-
-function SidePanel({ showLoginModal, setShowLoginModal }: Props) {
+function SidePanel() {
   const { token, clearUser } = useUser();
+  const authModal = useAuthModal();
   return (
     <>
       <div className="sidepanel">
@@ -34,14 +31,14 @@ function SidePanel({ showLoginModal, setShowLoginModal }: Props) {
             <>
               <Button
                 onClick={() => {
-                  setShowLoginModal(!showLoginModal);
+                  authModal.open({ reason: "Create an account or continue as guest." });
                 }}
               >
                 SignUp
               </Button>
               <Button
                 onClick={() => {
-                  setShowLoginModal(!showLoginModal);
+                  authModal.open({ reason: "Welcome back. Sign in to continue." });
                 }}
               >
                 Login

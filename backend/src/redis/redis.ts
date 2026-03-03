@@ -1,12 +1,16 @@
-import { createClient } from "redis";
-import { getEnv } from "../http/utils/getEnv";
+import { createClient, RedisClientType } from "redis";
+import { getEnv } from "../http/utils/getEnv"; // dotenv runs here
 
-const redisClient = createClient({
+// required for normal operation, optional with default
+const REDIS_URL = getEnv("REDIS_URL", "redis://127.0.0.1:6379");
+const REDIS_PASSWD = getEnv("REDIS_PASSWD", ""); // empty string → undefined below
+
+const redisClient: RedisClientType = createClient({
   username: "default",
-  password: getEnv("REDIS_PASSWD"),
+  password: REDIS_PASSWD || "",
   socket: {
-    host: getEnv("REDIS_URL", "redis://localhost:6379"),
-    port: 11974,
+    host: REDIS_URL,
+    port: 10484,
   },
 });
 
@@ -17,7 +21,7 @@ redisClient.on("error", (err) => {
 (async () => {
   try {
     await redisClient.connect();
-    console.log("✅ Redis connected");
+    console.log(`✅ Redis connected: ${REDIS_URL}`);
   } catch (err) {
     console.error("❌ Failed to connect to Redis:", err);
   }

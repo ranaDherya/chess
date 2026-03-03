@@ -34,23 +34,21 @@ class SocketManager {
   // Broadcast message to all users in the room
   broadcast(roomId: string, message: string) {
     const users = this.interestedSockets.get(roomId);
-    if (!users) {
-      console.error("No users in room!!!");
-      return;
-    }
+    if (!users?.length) return;
 
     users.forEach((user) => {
-      user.socket.send(message);
+      try {
+        user.socket.send(message);
+      } catch (e) {
+        console.error("broadcast send error", e);
+      }
     });
   }
 
-  // Remove user from the room and delete the mapping
+  // Remove user from the room and delete the mapping (no-op if user never joined a game)
   removeUser(user: User) {
     const roomId = this.userRoomMappping.get(user.userId);
-    if (!roomId) {
-      console.error("User was not in any room!!!");
-      return;
-    }
+    if (!roomId) return;
 
     const room = this.interestedSockets.get(roomId) || [];
     const remainingUsers = room.filter((u) => u.userId !== user.userId);

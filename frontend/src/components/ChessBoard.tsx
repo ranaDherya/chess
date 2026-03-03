@@ -50,7 +50,8 @@ function ChessBoard({
   const [invalidMoveSquare, setInvalidMoveSquare] = useState<Square | null>();
   const { isPaused, setIsPaused } = paused;
   const { playerColor, gameID, userID } = useUser();
-  const canMove = !isPaused && activePlayer === playerColor;
+  const canMove =
+    !isPaused && activePlayer === playerColor && playerColor !== null;
 
   // Drag and Drop Handdling
   const handleDragOver = (e: React.DragEvent) => {
@@ -101,7 +102,7 @@ function ChessBoard({
               userId: userID,
               gameId: gameID,
             },
-          })
+          }),
         );
         console.log(
           "socket sent with message:" +
@@ -115,7 +116,7 @@ function ChessBoard({
                 userId: userID,
                 gameId: gameID,
               },
-            })
+            }),
         );
 
         chess.move(move);
@@ -169,7 +170,7 @@ function ChessBoard({
                           const isPromotion = isPromotionMove(
                             chess,
                             from!,
-                            squareIndex
+                            squareIndex,
                           );
                           tempChess.move({
                             from: from ?? "",
@@ -184,7 +185,7 @@ function ChessBoard({
                         const isPromotion = isPromotionMove(
                           chess,
                           from!,
-                          squareIndex
+                          squareIndex,
                         );
                         const move = {
                           from,
@@ -199,7 +200,7 @@ function ChessBoard({
                               gameId: gameID,
                               userId: userID,
                             },
-                          })
+                          }),
                         );
                         console.log(
                           "socket sent with message:" +
@@ -210,7 +211,7 @@ function ChessBoard({
                                 gameId: gameID,
                                 userId: userID,
                               },
-                            })
+                            }),
                         );
                         setIsPaused(true);
                         chess.move(move);

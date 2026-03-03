@@ -3,17 +3,14 @@ import { Button } from "../components/Button";
 import chessBoardPNG from "/landing-chess-board.png";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
+import { useAuthModal } from "../context/AuthModalContext";
 
 import "./Landing.css";
 
-type Props = {
-  showLoginModal: boolean;
-  setShowLoginModal: React.Dispatch<React.SetStateAction<boolean>>;
-};
-
-function Landing({ showLoginModal, setShowLoginModal }: Props) {
+function Landing() {
   const navigate = useNavigate();
   const { token } = useUser();
+  const authModal = useAuthModal();
 
   return (
     <div className="landing-container">
@@ -36,9 +33,9 @@ function Landing({ showLoginModal, setShowLoginModal }: Props) {
           <Button
             onClick={() => {
               if (!token) {
-                setShowLoginModal(!showLoginModal);
+                authModal.open({ reason: "Sign in to play online." });
               } else {
-                navigate("/game/");
+                navigate("/play");
               }
             }}
           >

@@ -7,6 +7,7 @@ import { AuthProvider } from "@prisma/client";
 import { ObjectId } from "mongodb";
 import { DbMove } from "../types/types";
 import { redis } from "../redis/redis";
+import { REDIS_MOVE_QUEUE } from "../constants";
 
 type GAME_STATUS =
   | "IN_PROGRESS"
@@ -16,27 +17,14 @@ type GAME_STATUS =
   | "PLAYER_EXIT";
 type GAME_RESULT = "WHITE_WINS" | "BLACK_WINS" | "DRAW";
 
-const GAME_TIME_MS = 10 * 60 * 60 * 1000; // 10 minutes
+const GAME_TIME_MS = 10 * 60 * 1000; // 10 minutes
 
 export const isPromoting = (chess: Chess, from: Square, to: Square) => {
-  if (!from) {
-    return false;
-  }
-
+  if (!from) return false;
   const piece = chess.get(from);
-
-  if (piece?.type !== "p") {
-    return false;
-  }
-
-  if (piece.color !== chess.turn()) {
-    return false;
-  }
-
-  if (!["1", "8"].some((it) => to.endsWith(it))) {
-    return false;
-  }
-
+  if (piece?.type !== "p") return false;
+  if (piece.color !== chess.turn()) return false;
+  if (!["1", "8"].some((it) => to.endsWith(it))) return false;
   return chess
     .moves({ square: from, verbose: true })
     .map((it) => it.to)
@@ -62,7 +50,7 @@ export class Game {
     whitePlayerId: string,
     blackPlayerId: string | null,
     gameId?: string,
-    startTime?: Date
+    startTime?: Date,
   ) {
     this.whitePlayerId = whitePlayerId;
     this.blackPlayerId = blackPlayerId;
@@ -86,22 +74,29 @@ export class Game {
       comments: string | null;
       timeTaken: number | null;
       createdAt: Date;
-    }[]
+    }[],
   ) {
     moves.forEach((move) => {
       // Moves the piece on the board
       // and checks if the move is a promotion
-      if (isPromoting(this.board, move.from as Square, move.to as Square)) {
-        this.board.move({
-          from: move.from,
-          to: move.to,
-          promotion: "q",
-        });
-      } else {
-        this.board.move({
-          from: move.from,
-          to: move.to,
-        });
+      const moveResult = isPromoting(
+        this.board,
+        move.from as Square,
+        move.to as Square,
+      )
+        ? this.board.move({
+            from: move.from,
+            to: move.to,
+            promotion: "q",
+          })
+        : this.board.move({
+            from: move.from,
+            to: move.to,
+          });
+
+      // Add to moveList if move was successful
+      if (moveResult) {
+        this.moveList.push(moveResult.san);
       }
     });
 
@@ -151,7 +146,11 @@ export class Game {
     const WhitePlayer = users.find((user) => user.id === this.whitePlayerId);
     const BlackPlayer = users.find((user) => user.id === this.blackPlayerId);
 
-    // Sends socket message to all in game
+    // Game is now in progress: start timers
+    this.resetAbandonTimer();
+    this.resetMoveTimer();
+
+    // Sends socket message to all in game (both players + spectators)
     socketManager.broadcast(
       this.gameId,
       JSON.stringify({
@@ -175,13 +174,17 @@ export class Game {
           timePerPlayer: 600000,
           fen: this.board.fen(),
           moves: [],
+          gameStarted: true, // Clock and moves allowed from now
         },
-      })
+      }),
     );
   }
 
-  // Create game in db
+  // Create game in db (only when both players are set)
   async createGameInDb() {
+    if (!this.blackPlayerId) {
+      throw new Error("Cannot create game in DB without black player");
+    }
     this.startTime = new Date(Date.now());
     this.lastMoveTime = this.startTime;
 
@@ -199,7 +202,7 @@ export class Game {
         },
         blackPlayer: {
           connect: {
-            id: this.blackPlayerId ?? "",
+            id: this.blackPlayerId,
           },
         },
       },
@@ -239,8 +242,18 @@ export class Game {
     ]);
   }
 
+  // True when only white has joined (waiting for second player). No moves or timers allowed.
+  isWaitingForSecondPlayer(): boolean {
+    return this.blackPlayerId === null;
+  }
+
   // Move Piece on Board
   async makeMove(user: User, move: Move) {
+    // No moves until both players have joined
+    if (this.isWaitingForSecondPlayer()) {
+      return;
+    }
+
     // validate the type of move
     if (this.board.turn() === "w" && user.userId !== this.whitePlayerId) {
       return;
@@ -252,7 +265,7 @@ export class Game {
 
     if (this.result) {
       console.error(
-        `User ${user.userId} is making a move post game completion`
+        `User ${user.userId} is making a move post game completion`,
       );
       return;
     }
@@ -301,7 +314,7 @@ export class Game {
       timeTaken: moveTimestamp.getTime() - this.lastMoveTime.getTime(),
     };
     // Push to Redis queue
-    await redis.rPush("move_queue", JSON.stringify(redisPayload));
+    await redis.rPush(REDIS_MOVE_QUEUE, JSON.stringify(redisPayload));
 
     // Flipped player turn because move already happened
     if (this.board.turn() === "b") {
@@ -333,17 +346,19 @@ export class Game {
           playerTurn: this.board.turn(),
           player1TimeConsumed: this.player1TimeConsumed,
           player2TimeConsumed: this.player2TimeConsumed,
+          timePerPlayer: 600000,
           moveList: this.moveList,
+          gameId: this.gameId,
         },
-      })
+      }),
     );
 
     if (this.board.isGameOver()) {
       const result = this.board.isDraw()
         ? "DRAW"
         : this.board.turn() === "b"
-        ? "WHITE_WINS"
-        : "BLACK_WINS";
+          ? "WHITE_WINS"
+          : "BLACK_WINS";
 
       this.endGame("COMPLETED", result);
     }
@@ -371,6 +386,10 @@ export class Game {
     return this.player2TimeConsumed;
   }
 
+  getMoveList() {
+    return this.moveList;
+  }
+
   // Reset Timers
   async resetAbandonTimer() {
     if (this.timer) {
@@ -379,7 +398,7 @@ export class Game {
     this.timer = setTimeout(() => {
       this.endGame(
         "ABANDONED",
-        this.board.turn() === "b" ? "WHITE_WINS" : "BLACK_WINS"
+        this.board.turn() === "b" ? "WHITE_WINS" : "BLACK_WINS",
       );
     }, 60 * 1000);
   }
@@ -402,53 +421,64 @@ export class Game {
   async exitGame(user: User) {
     this.endGame(
       "PLAYER_EXIT",
-      user.userId === this.blackPlayerId ? "WHITE_WINS" : "BLACK_WINS"
+      user.userId === this.blackPlayerId ? "WHITE_WINS" : "BLACK_WINS",
     );
   }
 
-  // End Game
+  // End Game – set result immediately so GameManager can clean up; always broadcast so frontend shows game over
   async endGame(status: GAME_STATUS, result: GAME_RESULT) {
-    const updatedGame = await db.game.update({
-      data: {
-        status,
-        result: result,
-      },
-      where: {
-        id: this.gameId,
-      },
-      include: {
-        moves: {
-          orderBy: {
-            moveNumber: "asc",
-          },
+    this.result = result;
+    this.clearTimer();
+    this.clearMoveTimer();
+
+    let payload: {
+      result: GAME_RESULT;
+      status: GAME_STATUS;
+      moves: unknown[];
+      blackPlayer: { id: string; name: string | null };
+      whitePlayer: { id: string; name: string | null };
+    } = {
+      result,
+      status,
+      moves: [],
+      blackPlayer: { id: "", name: null },
+      whitePlayer: { id: "", name: null },
+    };
+
+    try {
+      const updatedGame = await db.game.update({
+        data: { status, result },
+        where: { id: this.gameId },
+        include: {
+          moves: { orderBy: { moveNumber: "asc" } },
+          blackPlayer: true,
+          whitePlayer: true,
         },
-        blackPlayer: true,
-        whitePlayer: true,
-      },
-    });
+      });
+      payload = {
+        result,
+        status,
+        moves: updatedGame.moves,
+        blackPlayer: {
+          id: updatedGame.blackPlayer.id,
+          name: updatedGame.blackPlayer.name,
+        },
+        whitePlayer: {
+          id: updatedGame.whitePlayer.id,
+          name: updatedGame.whitePlayer.name,
+        },
+      };
+    } catch (e) {
+      console.error("endGame: db update failed (game may not exist in DB yet)", e);
+    }
 
     socketManager.broadcast(
       this.gameId,
       JSON.stringify({
         type: GAME_ENDED,
-        payload: {
-          result,
-          status,
-          moves: updatedGame.moves,
-          blackPlayer: {
-            id: updatedGame.blackPlayer.id,
-            name: updatedGame.blackPlayer.name,
-          },
-          whitePlayer: {
-            id: updatedGame.whitePlayer.id,
-            name: updatedGame.whitePlayer.name,
-          },
-        },
-      })
+        payload,
+      }),
     );
-    // clear timers
-    this.clearTimer();
-    this.clearMoveTimer();
   }
 
   // Move and Abandon Timers

@@ -19,7 +19,7 @@ app.use(
     secret: getEnv("COOKIE_SECRET", "keyboard cat"),
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: COOKIE_MAX_AGE },
+    cookie: { secure: false, maxAge: COOKIE_MAX_AGE * 1000 },
   })
 );
 initPassport();
@@ -30,15 +30,19 @@ let allowedHostsArray = getEnv("ALLOWED_HOSTS");
 
 const allowedHosts = allowedHostsArray ? allowedHostsArray.split(",") : ["*"];
 
-// app.use(
-//   cors({
-//     origin: allowedHosts,
-//     methods: "GET,POST,PUT,DELETE",
-//     credentials: true,
-//   })
-// );
-
-app.use(cors());
+// CORS must be configured for credentialed requests (guest cookies / refresh)
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Allow non-browser requests (no Origin) and allow all in dev if configured
+      if (!origin) return cb(null, true);
+      if (allowedHosts.includes("*")) return cb(null, true);
+      return cb(null, allowedHosts.includes(origin));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 
 // Register HTTP routes
 app.use("/api/auth", authRoute);

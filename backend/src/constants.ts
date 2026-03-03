@@ -12,5 +12,11 @@ export const GAME_ALERT = "game_alert";
 export const GAME_ADDED = "game_added";
 export const GAME_TIME = "game_time";
 export const EXIT_GAME = "exit_game";
+export const SURRENDER = "surrender";
+export const SPECTATE = "spectate";
+export const ROLE_CHOICE = "role_choice";
 
 export const COOKIE_MAX_AGE = 48 * 60 * 60; // 2 day in seconds
+
+// redis
+export const REDIS_MOVE_QUEUE = "move_queue";

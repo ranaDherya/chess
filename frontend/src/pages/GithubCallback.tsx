@@ -18,10 +18,11 @@ export default function GithubCallback() {
       setToken(token);
       const user = { id: id, name: name, token: token, isGuest: false };
       localStorage.setItem("user", JSON.stringify(user));
-      // Redirect to home
-      navigate("/");
+      const redirect = localStorage.getItem("post_login_redirect") || "/";
+      localStorage.removeItem("post_login_redirect");
+      navigate(redirect, { replace: true });
     } else {
-      navigate("/");
+      navigate("/", { replace: true });
     }
   }, []);
 

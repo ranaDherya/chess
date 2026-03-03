@@ -40,6 +40,9 @@ model Game {
   timeControl   TimeControl
   startingFen   String      @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
   currentFen    String?
+  // Monotonic counter that makes currentFen invariant explicit:
+  // currentFen must equal Move.after for the move with moveNumber == lastMoveNumber.
+  lastMoveNumber Int       @default(0)
   startAt       DateTime    @default(now())
   endAt         DateTime?
   moves         Move[]
@@ -64,6 +67,7 @@ model Move {
   san        String?
 
   @@index([gameId])
+  @@unique([gameId, moveNumber])
 }
 
 enum GameStatus {

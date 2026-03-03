@@ -1,4 +1,5 @@
-import { createContext, useState, useContext, ReactNode } from "react";
+import { createContext, useEffect, useState, useContext, ReactNode } from "react";
+import axios from "axios";
 
 interface UserContextType {
   userID: string | null;
@@ -24,6 +25,52 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [tokn, setTokn] = useState<string>("");
   const [color, setColor] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
+
+  const BACKEND_URL = "http://localhost:3000/api";
+
+  // Hydrate auth once so login works seamlessly across all pages (incl. OAuth redirects)
+  useEffect(() => {
+    if (tokn) return;
+
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user?.id && user?.token) {
+          setUserID(user.id);
+          setName(user.name ?? null);
+          setTokn(user.token);
+          return;
+        }
+      } catch {
+        // ignore and try refresh
+      }
+    }
+
+    (async () => {
+      try {
+        const { data } = await axios.get(`${BACKEND_URL}/auth/refresh`, {
+          withCredentials: true,
+        });
+        if (data?.token && data?.id) {
+          setUserID(data.id);
+          setName(data.name ?? null);
+          setTokn(data.token);
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
+              id: data.id,
+              name: data.name,
+              token: data.token,
+              isGuest: data.isGuest ?? false,
+            }),
+          );
+        }
+      } catch {
+        // not logged in
+      }
+    })();
+  }, []);
 
   const setUser = (id: string, name: string) => {
     setUserID(id);
@@ -52,6 +99,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setGameId(null);
     setTokn("");
     setColor(null);
+    setUserID(null);
+    setName(null);
   };
 
   return (
